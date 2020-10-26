@@ -30,6 +30,11 @@ class Mention_update(BaseModel):
     text :str
     type : str
 
+class Mention_delete(BaseModel):
+
+    location: Location
+    text :str
+
 
     
 
@@ -75,12 +80,89 @@ async def add(req : Ner = Body(...)):
 
 @app.get("/list/")
 async def all_list():
-    person = db.tags.find({"mentions.type":"Person"}).count()
-    location = db.tags.find({"mentions.type":"Location"}).count()
-    number = db.tags.find({"mentions.type":"Number"}).count()
+    x = list(db.tags.find({},{'text':0,'_id':0,'id':0,'mentions.location':0,'mentions.text':0}))
+
+    person = 0
+    location = 0
+    Organization = 0
+    JobTitle = 0
+    Facility = 0
+    GeographicFeature = 0
+    Product = 0
+    Date = 0
+    Time = 0
+    Duration = 0
+    Measure = 0
+    Money = 0
+    Ordinal = 0
+    Number = 0
+    Percent = 0
+    Address = 0
+    PhoneNumber = 0
+    EmailAddress = 0
+    URL = 0
+    IPAddress = 0
+    Hashtag = 0
+    TwitterHandle = 0
+    
+    for i in x :
+        for i in (i.get('mentions')) :
+            if(i.get('type')=="Person") :
+                person+=1
+            elif(i.get('type')=="Location"):
+                location+=1
+            elif(i.get('type')=="Organization"):
+                Organization+=1
+            elif(i.get('type')=="JobTitle"):
+                JobTitle+=1
+            elif(i.get('type')=="Facility"):
+                Facility+=1
+            elif(i.get('type')=="GeographicFeature"):
+                GeographicFeature+=1
+            elif(i.get('type')=="Product"):
+                Product+=1
+            elif(i.get('type')=="Date"):
+                Date+=1
+            elif(i.get('type')=="Time"):
+                Time+=1
+            elif(i.get('type')=="Duration"):
+                Duration+=1
+            elif(i.get('type')=="Measure"):
+                Measure+=1
+            elif(i.get('type')=="Money"):
+                Money+=1
+            elif(i.get('type')=="Ordinal"):
+                Ordinal+=1
+            elif(i.get('type')=="Number"):
+                Number+=1
+            elif(i.get('type')=="Percent"):
+                Percent+=1
+            elif(i.get('type')=="Address"):
+                Address+=1
+            elif(i.get('type')=="PhoneNumber"):
+                PhoneNumber+=1
+            elif(i.get('type')=="EmailAddress"):
+                EmailAddress+=1
+            elif(i.get('type')=="URL"):
+                URL+=1
+            elif(i.get('type')=="IPAddress"):
+                IPAddress+=1
+            elif(i.get('type')=="Hashtag"):
+                Hashtag+=1
+            elif(i.get('type')=="TwitterHandle"):
+                TwitterHandle+=1
+
+
     
 
-    return {"Person":person , "Location":location,"Number":number}
+
+
+    return {"Data":db.tags.find().count(),"Person":person,"Location":location,"Organization":Organization,
+    "JobTitle":JobTitle , "Facility":Facility ,"GeographicFeature":GeographicFeature,"Product":Product,"Date":Date,
+    "Time":Time,"Duration":Duration,"Measure":Measure,"Money":Money,"Ordinal":Ordinal,"Number":Number,"Percent":Percent,
+    "Address":Address,"PhoneNumber":PhoneNumber,"EmailAddress":EmailAddress,"URL":URL,"IPAddress":IPAddress,"Hashtag":Hashtag,
+    "TwitterHandle":TwitterHandle
+    }
 
     
 @app.put("/update/{url_id}")
@@ -93,20 +175,21 @@ async def update(url_id:int,req : Ner_update = Body(...)):
         return{"Alert":"ID NOT FOUND!"}
 
 
-@app.delete("/unset/{url_id}/")
-async def unset(url_id:int,req: Mention_update = Body(...)):
+@app.delete("/unset/{url_id}/{begin}/{end}")
+async def unset(url_id:int,begin:int,end:int):
     if(db.tags.find({"id":url_id}).count()>0):
-        db.tags.update_one({"id":url_id},{"$pull":{"mentions":{'$in':[dict(req)]}}})
-        return dict(req)
+        db.tags.update_one({"id":url_id},{'$pull':{"mentions":{"location.begin":begin,"location.end":end}}})
+        return {"Success":"Tag Deleted"}
     else :
         return{"Alert":"ID NOT FOUND!"}
 
 
-@app.put("/settype/{url_id}/{begin}/{end}")
-async def settype(url_id:int,begin:int,end:int,req:Type_update = Body(...)):
+@app.put("/settype/{url_id}/{begin}/{end}/{_type}")
+async def settype(url_id:int,begin:int,end:int,_type:str):
     if(db.tags.find({"id":url_id}).count()>0):
-        db.tags.update_one({"id":url_id,"mentions.location.begin":begin,"mentions.location.end":end},{'$set':{"mentions.$.type":dict(req)}})
-        return dict(req)
+        db.tags.update_one({"id":url_id,"mentions.location.begin":begin,"mentions.location.end":end},{'$set':{"mentions.$.type":_type}})
+        return {"Update":"Change to "+_type}
     else :
         return{"Alert":"ID NOT FOUND!"}
+
 

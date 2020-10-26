@@ -184,6 +184,15 @@ async def unset(url_id:int,begin:int,end:int):
         return{"Alert":"ID NOT FOUND!"}
 
 
+@app.delete("/delete/{url_id}")
+async def delete(url_id:int):
+    if(db.tags.find({"id":url_id}).count()>0):
+        db.tags.delete_one({"id":url_id})
+        return {"Success":"Data Deleted"}
+    else :
+        return{"Alert":"ID NOT FOUND!"}
+
+
 @app.put("/settype/{url_id}/{begin}/{end}/{_type}")
 async def settype(url_id:int,begin:int,end:int,_type:str):
     if(db.tags.find({"id":url_id}).count()>0):

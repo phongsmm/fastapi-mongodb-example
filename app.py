@@ -6,6 +6,8 @@ from decouple import config
 from pymongo import MongoClient
 from pydantic import BaseModel
 from bson import ObjectId
+from pythainlp.tokenize import word_tokenize
+
 
 
 
@@ -200,5 +202,10 @@ async def settype(url_id:int,begin:int,end:int,_type:str):
         return {"Update":"Change to "+_type}
     else :
         return{"Alert":"ID NOT FOUND!"}
+
+
+@app.get("/cut/{word}")
+def thai_cut(word:str):
+    return {"message":word_tokenize(word,engine='newmm')}
 
 

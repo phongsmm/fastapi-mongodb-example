@@ -22,6 +22,5 @@ python-multipart==0.0.5
 pytz==2020.5
 six==1.15.0
 starlette==0.13.6
-tortoise-orm==0.16.21
 typing-extensions==3.7.4.3
 uvicorn==0.13.3

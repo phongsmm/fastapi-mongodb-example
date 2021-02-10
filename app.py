@@ -1,14 +1,16 @@
 from typing import Optional
-from fastapi import FastAPI , Body
+from fastapi import FastAPI , Body , Depends , HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from decouple import config
 from pymongo import MongoClient
 from pydantic import BaseModel , Field
 from bson import ObjectId
 from datetime import datetime
 from asynchat import async_chat
-
+from passlib.hash import bcrypt
+import jwt
 
 class PyObjectId(ObjectId):
 
@@ -42,14 +44,24 @@ class Add_Event(BaseModel):
     Text: str
     Date: Optional[datetime] = datetime.now()
 
+class Gallary(BaseModel):
+    title:str
+    img:str
+
 class Add_News(BaseModel):
     Text: str
     Img_url:str
     Date: Optional[datetime] = datetime.now()
 
 class Users(BaseModel):
-    Username:str
-    Password:str
+    id: Optional[PyObjectId] = Field(alias='_id')
+    Username: str
+    Password: str
+    
+    @classmethod
+    async def get_user(cls,username):
+        return cls.get(username = username)
+    
 
 app = FastAPI()
 app.add_middleware(
@@ -61,8 +73,15 @@ app.add_middleware(
 )
 
 MONGO_DETAILS = config('MONGO_DETAILS')
+JWT_SECRET = config('JWT')
 client = MongoClient(MONGO_DETAILS)
 db = client['Wattheplela']
+
+
+
+othen2_scheme = OAuth2PasswordBearer(tokenUrl='token')
+
+
 
 @app.get("/")
 def home():
@@ -76,6 +95,20 @@ async def show():
 
     return {'results':data}
 
+@app.get("/gallery/")
+async def gallary():
+    data =[]
+    for i in db.Gallery.find():
+        data.append(Event(**i))
+
+    return {'results':data}
+
+@app.post("/gallery/")
+async def add_to_gallery(img:Gallary):
+    ret = db.Gallery.insert_one(img.dict(by_alias=True))
+    return {'Gallery': img}
+
+
 @app.post('/event')
 async def add_event(event: Add_Event):
     ret = db.Data.insert_one(event.dict(by_alias=True))
@@ -86,20 +119,55 @@ async def add_news(news:Add_News ):
     ret = db.Data.insert_one(news.dict(by_alias=True))
     return {'News':news}
 
-@app.post('/checkAdmin')
-async def check_admin(user:Users):
-    username = []
-    password = []
-    for e,i in enumerate(db.Users.find()):
-        username.append(i['Username'])
-        password.append(i['Password'])
-    if user.Username in username:
-        if user.Password == password[username.index(user.Username)]:
-            return {'Status':'Successful'}
-        else:
-            return {'Status':'Access Denied'}
-    else :
-        return {'Status':'Access Denied'}
 
 
+@app.post('/register')
+async def register(user: Users):
+    ret = db.Users.insert_one({"Username":user.Username,"Password":bcrypt.hash(user.Password)})
+    return {"result":{user.Username,bcrypt.hash(user.Password)}}
+
+
+def verify(password,hashpassword):
+    return bcrypt.verify(password,hashpassword)
+
+def authenticate(username:str,password:str):
+    found = db.Users.count_documents({"Username":username})
+    cur = db.Users.find_one({"Username":username})
+    
+    if found < 1:
+        return False
+    if not verify(password , cur['Password']):
+        return False
+    return True
+
+@app.post('/token')
+async def generate_token(from_data:OAuth2PasswordRequestForm = Depends()):
+    user = authenticate(from_data.username , from_data.password)
+    if not user:
+        return {"Error":"Invalid Username or Password"}
+    cur = db.Users.find_one({"Username":from_data.username})
+    cur_dict = {"Username":cur['Username'],"Password":cur['Password']}
+    token = jwt.encode(cur_dict,JWT_SECRET)
+    return {"access_token":token , 'token_type':"bearer"}
+
+    
+
+async def get_current_user(token:str = Depends(othen2_scheme)):
+    try:
+        payload = jwt.decode(token,JWT_SECRET,algorithms=['HS256'])
+        user = db.Users.find_one({"Username":payload.get('Username')})
+    except Exception as e:
+        raise HTTPException(status_code=401,detail="Invalid Username or Password")
+    return user['Username']
+
+
+@app.get('/admin')
+async def admin(user:Users = Depends(get_current_user)):
+    
+    return {"Welcome_Admin":user}
+
+
+        
+
+    
 

@@ -11,6 +11,7 @@ from datetime import datetime
 from asynchat import async_chat
 from passlib.hash import bcrypt
 import jwt
+import time
 
 class PyObjectId(ObjectId):
 
@@ -46,11 +47,11 @@ class Add_Event(BaseModel):
 
 class Gallary(BaseModel):
     title:str
-    img:str
+    Img_uri:str
 
 class Add_News(BaseModel):
     Text: str
-    Img_url:str
+    Img_uri:str
     Date: Optional[datetime] = datetime.now()
 
 class Users(BaseModel):
@@ -81,43 +82,85 @@ db = client['Wattheplela']
 
 othen2_scheme = OAuth2PasswordBearer(tokenUrl='token')
 
+@app.post('/token')
+async def generate_token(from_data:OAuth2PasswordRequestForm = Depends()):
+    user = authenticate(from_data.username , from_data.password)
+    if not user:
+        return {"Error":"Invalid Username or Password"}
+    cur = db.Users.find_one({"Username":from_data.username})
+    cur_dict = {"Username":cur['Username'],"Password":cur['Password'] , "exp":time.time()+500}
+    token = jwt.encode(cur_dict,JWT_SECRET)
+    return {"access_token":token , 'token_type':"bearer"}
+
+@app.post('/get_token')
+async def generate_token(user:Users):
+    auth = authenticate(user.Username , user.Password)
+    if not auth:
+        return {"Error":"Invalid Username or Password"}
+    cur = db.Users.find_one({"Username":user.Username})
+    cur_dict = {"Username":cur['Username'],"Password":cur['Password'] , "exp":time.time()+500}
+    token = jwt.encode(cur_dict,JWT_SECRET)
+    return {"access_token":token , 'token_type':"bearer"}
+
+async def get_current_user(token:str = Depends(othen2_scheme)):
+    try:
+        payload = jwt.decode(token,JWT_SECRET,algorithms=['HS256'])
+    except Exception as e:
+        raise HTTPException(status_code=401,detail="Invalid Username or Password")
+    return payload.get('Username')
+
+
 
 
 @app.get("/")
 def home():
     return {"message": "ยินดีต้อนรับ"}
 
-@app.get("/get/")
+
+@app.get("/event")
 async def show():
     data =[]
-    for i in db.Data.find():
+    for i in db.Event.find():
         data.append(Event(**i))
 
     return {'results':data}
 
-@app.get("/gallery/")
+@app.get("/gallery")
 async def gallary():
     data =[]
     for i in db.Gallery.find():
-        data.append(Event(**i))
+        data.append(Gallery(**i))
 
     return {'results':data}
 
-@app.post("/gallery/")
+@app.get("/News")
+async def show():
+    data =[]
+    for i in db.News.find():
+        data.append(News(**i))
+
+    return {'results':data}
+
+@app.post("/gallery")
 async def add_to_gallery(img:Gallary):
     ret = db.Gallery.insert_one(img.dict(by_alias=True))
     return {'Gallery': img}
 
 
 @app.post('/event')
-async def add_event(event: Add_Event):
-    ret = db.Data.insert_one(event.dict(by_alias=True))
-    return {'Event': event}
+async def add_event(event: Add_Event , user:str = Depends(get_current_user)):
+    try:
+        ret = db.Event.insert_one({"Text":event.Text,"Date":event.Date,"Post_by":user})
+        return {'Event': event , "Post_by":user}
+    except Exception as e:
+        raise HTTPException(status_code=401,detail=f"You're not Admin! {e}")
+
+
 
 @app.post('/news')
 async def add_news(news:Add_News ):
-    ret = db.Data.insert_one(news.dict(by_alias=True))
-    return {'News':news}
+    ret = db.News.insert_one(news.dict(by_alias=True))
+    return {'News':news, "Post_by":user}
 
 
 
@@ -140,31 +183,13 @@ def authenticate(username:str,password:str):
         return False
     return True
 
-@app.post('/token')
-async def generate_token(from_data:OAuth2PasswordRequestForm = Depends()):
-    user = authenticate(from_data.username , from_data.password)
-    if not user:
-        return {"Error":"Invalid Username or Password"}
-    cur = db.Users.find_one({"Username":from_data.username})
-    cur_dict = {"Username":cur['Username'],"Password":cur['Password']}
-    token = jwt.encode(cur_dict,JWT_SECRET)
-    return {"access_token":token , 'token_type':"bearer"}
 
-    
-
-async def get_current_user(token:str = Depends(othen2_scheme)):
-    try:
-        payload = jwt.decode(token,JWT_SECRET,algorithms=['HS256'])
-        user = db.Users.find_one({"Username":payload.get('Username')})
-    except Exception as e:
-        raise HTTPException(status_code=401,detail="Invalid Username or Password")
-    return user['Username']
 
 
 @app.get('/admin')
-async def admin(user:Users = Depends(get_current_user)):
+async def admin(admin:Users = Depends(get_current_user)):
     
-    return {"Welcome_Admin":user}
+    return {"Welcome_Admin":admin}
 
 
         

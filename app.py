@@ -33,7 +33,7 @@ class PyObjectId(ObjectId):
 class Event(BaseModel):
     id: Optional[PyObjectId] = Field(alias='_id')
     Text: str
-    Img_uri:str
+    Img:str
     Date: Optional[datetime] = None
 
     class Config:
@@ -44,7 +44,7 @@ class Event(BaseModel):
 
 class Add_Event(BaseModel):
     Text: str
-    Img_uri:str
+    Img:str
     Date: Optional[datetime] = datetime.now()
 
 class Gallary(BaseModel):

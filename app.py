@@ -33,6 +33,7 @@ class PyObjectId(ObjectId):
 class Event(BaseModel):
     id: Optional[PyObjectId] = Field(alias='_id')
     Text: str
+    Img_uri:str
     Date: Optional[datetime] = None
 
     class Config:
@@ -43,6 +44,7 @@ class Event(BaseModel):
 
 class Add_Event(BaseModel):
     Text: str
+    Img_uri:str
     Date: Optional[datetime] = datetime.now()
 
 class Gallary(BaseModel):
@@ -150,7 +152,7 @@ async def add_to_gallery(img:Gallary):
 @app.post('/event')
 async def add_event(event: Add_Event , user:str = Depends(get_current_user)):
     try:
-        ret = db.Event.insert_one({"Text":event.Text,"Date":event.Date,"Post_by":user})
+        ret = db.Event.insert_one({"Text":event.Text,"Date":event.Date,"Img":event.Img_uri,"Post_by":user})
         return {'Event': event , "Post_by":user}
     except Exception as e:
         raise HTTPException(status_code=401,detail=f"You're not Admin! {e}")

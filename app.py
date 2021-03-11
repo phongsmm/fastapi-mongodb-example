@@ -33,7 +33,8 @@ class PyObjectId(ObjectId):
 class Event(BaseModel):
     id: Optional[PyObjectId] = Field(alias='_id')
     Text: str
-    Img:str
+    Img_uri:str
+    Detail:str
     Date: Optional[datetime] = None
 
     class Config:
@@ -44,11 +45,13 @@ class Event(BaseModel):
 
 class Add_Event(BaseModel):
     Text: str
-    Img:str
+    Img_uri:str
+    Detail:str
     Date: Optional[datetime] = datetime.now()
 
 class Gallary(BaseModel):
     title:str
+    Album:str
     Img_uri:str
 
 class Add_News(BaseModel):
@@ -144,30 +147,29 @@ async def show():
     return {'results':data}
 
 @app.post("/gallery")
-async def add_to_gallery(img:Gallary):
+async def add_to_gallery(img:Gallary, user:str = Depends(get_current_user)):
     ret = db.Gallery.insert_one(img.dict(by_alias=True))
     return {'Gallery': img}
 
 
 @app.post('/event')
 async def add_event(event: Add_Event , user:str = Depends(get_current_user)):
-    try:
-        ret = db.Event.insert_one({"Text":event.Text,"Date":event.Date,"Img":event.Img_uri,"Post_by":user})
-        return {'Event': event , "Post_by":user}
-    except Exception as e:
-        raise HTTPException(status_code=401,detail=f"You're not Admin! {e}")
+     ret = db.Event.insert_one({"Text":event.Text,"Detail":event.Detail,"Date":event.Date,"Img_uri":event.Img_uri,"Post_by":user})
+     return {'Event': event , "Post_by":user}
+
 
 
 
 @app.post('/news')
-async def add_news(news:Add_News ):
+async def add_news(news:Add_News , user:str = Depends(get_current_user)):
     ret = db.News.insert_one(news.dict(by_alias=True))
     return {'News':news, "Post_by":user}
 
 
 
+
 @app.post('/register')
-async def register(user: Users):
+async def register(user: Users, admin:str = Depends(get_current_user)):
     ret = db.Users.insert_one({"Username":user.Username,"Password":bcrypt.hash(user.Password)})
     return {"result":{user.Username,bcrypt.hash(user.Password)}}
 
@@ -186,12 +188,6 @@ def authenticate(username:str,password:str):
     return True
 
 
-
-
-@app.get('/admin')
-async def admin(admin:Users = Depends(get_current_user)):
-    
-    return {"Welcome_Admin":admin}
 
 
         

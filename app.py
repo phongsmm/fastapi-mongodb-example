@@ -49,7 +49,7 @@ class Add_Event(BaseModel):
     Detail:str
     Date: Optional[datetime] = datetime.now()
 
-class Gallary(BaseModel):
+class Gallery(BaseModel):
     title:str
     Album:str
     Img_uri:str
@@ -131,7 +131,7 @@ async def show():
     return {'results':data}
 
 @app.get("/gallery")
-async def gallary():
+async def gallery():
     data =[]
     for i in db.Gallery.find():
         data.append(Gallery(**i))
@@ -147,7 +147,7 @@ async def show():
     return {'results':data}
 
 @app.post("/gallery")
-async def add_to_gallery(img:Gallary, user:str = Depends(get_current_user)):
+async def add_to_gallery(img:Gallery, user:str = Depends(get_current_user)):
     ret = db.Gallery.insert_one(img.dict(by_alias=True))
     return {'Gallery': img}
 

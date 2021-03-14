@@ -47,7 +47,10 @@ class Add_Event(BaseModel):
     Text: str
     Img_uri:str
     Detail:str
-    Date: Optional[datetime] = datetime.now()
+    Date: Optional[datetime] = None
+
+class Remove_Event(BaseModel):
+    Text:str
 
 class Gallery(BaseModel):
     title:str
@@ -208,10 +211,16 @@ async def remove_album(img:Album, user:str = Depends(get_current_user)):
 
 @app.post('/event')
 async def add_event(event: Add_Event , user:str = Depends(get_current_user)):
-     ret = db.Event.insert_one({"Text":event.Text,"Detail":event.Detail,"Date":event.Date,"Img_uri":event.Img_uri,"Post_by":user})
+     ret = db.Event.insert_one({"Text":event.Text,"Detail":event.Detail,"Date":datetime.now(),"Img_uri":event.Img_uri,"Post_by":user})
      return {'Event': event , "Post_by":user}
 
-
+@app.delete('/event')
+async def remove_event(event: Remove_Event , user:str = Depends(get_current_user)):
+    try:
+        ret = db.Event.delete_one(event.dict(by_alias=True))
+        return {'Status': "Delete Complete"}
+    except Exception as e:
+        return {'Error': e }
 
 
 

@@ -54,13 +54,24 @@ class Gallery(BaseModel):
     Album:str
     Img_uri:str
 
+class Picture(BaseModel):
+    title:str
+
+class Album(BaseModel):
+    Album:str
+
 class Add_News(BaseModel):
     Text: str
     Img_uri:str
+    id:str
+    Post_by:str
     Date: Optional[datetime] = datetime.now()
 
+class Remove_News(BaseModel):
+    id:str
+
+
 class Users(BaseModel):
-    id: Optional[PyObjectId] = Field(alias='_id')
     Username: str
     Password: str
     
@@ -138,18 +149,61 @@ async def gallery():
 
     return {'results':data}
 
-@app.get("/News")
+@app.get("/news")
 async def show():
     data =[]
     for i in db.News.find():
-        data.append(News(**i))
+        data.append(Add_News(**i))
 
     return {'results':data}
+
+@app.post('/news')
+async def add_news(news:Add_News , user:str = Depends(get_current_user)):
+    found = db.News.count_documents({"id":news.id})
+    if found > 0:
+        return {'Status':"ID Already Exist"}
+    else:
+        ret = db.News.insert_one({"Text":news.Text,"Img_uri":news.Img_uri,"id":news.id,"Post_by":user,"Date":news.Date})
+        return {'Status':"Post Complete"}
+    
+
+@app.delete('/news')
+async def remove_news(news:Remove_News , user:str = Depends(get_current_user)):
+    try:
+
+        ret = db.News.delete_one({})
+        return {'results':news,'Status':'Deleted'}
+    except Exception as e:
+        return {'Status':e}
+        
+
+
+
 
 @app.post("/gallery")
 async def add_to_gallery(img:Gallery, user:str = Depends(get_current_user)):
     ret = db.Gallery.insert_one(img.dict(by_alias=True))
     return {'Gallery': img}
+
+@app.delete("/gallery")
+async def add_to_gallery(img:Picture, user:str = Depends(get_current_user)):
+    try:
+        ret = db.Gallery.delete_one(img.dict(by_alias=True))
+        return {'Status': "Delete Complete"}
+    except Exception as e:
+        return {'Error': e }
+
+
+@app.delete("/album")
+async def remove_album(img:Album, user:str = Depends(get_current_user)):
+    try:
+        ret = db.Gallery.delete_many(img.dict(by_alias=True))
+        return {'Status': "Delete Complete"}
+    except Exception as e:
+        return {'Error': e }
+    return {'Gallery': img}
+
+
 
 
 @app.post('/event')
@@ -160,10 +214,8 @@ async def add_event(event: Add_Event , user:str = Depends(get_current_user)):
 
 
 
-@app.post('/news')
-async def add_news(news:Add_News , user:str = Depends(get_current_user)):
-    ret = db.News.insert_one(news.dict(by_alias=True))
-    return {'News':news, "Post_by":user}
+
+
 
 
 

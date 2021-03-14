@@ -64,8 +64,8 @@ class Add_News(BaseModel):
     Text: str
     Detail:str
     id:str
-    Post_by:str
-    Date: Optional[datetime] = datetime.now()
+    Post_by:Optional[str] = None
+    Date: Optional[datetime] = None
 
 class Remove_News(BaseModel):
     id:str
@@ -163,7 +163,7 @@ async def add_news(news:Add_News , user:str = Depends(get_current_user)):
     if found > 0:
         return {'Status':"ID Already Exist"}
     else:
-        ret = db.News.insert_one({"Text":news.Text,"Detail":news.Detail,"id":news.id,"Post_by":user,"Date":news.Date})
+        ret = db.News.insert_one({"Text":news.Text,"Detail":news.Detail,"id":news.id,"Post_by":user,"Date":datetime.now()})
         return {'Status':"Post Complete"}
     
 

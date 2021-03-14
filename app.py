@@ -62,7 +62,7 @@ class Album(BaseModel):
 
 class Add_News(BaseModel):
     Text: str
-    Img_uri:str
+    Detail:str
     id:str
     Post_by:str
     Date: Optional[datetime] = datetime.now()
@@ -163,7 +163,7 @@ async def add_news(news:Add_News , user:str = Depends(get_current_user)):
     if found > 0:
         return {'Status':"ID Already Exist"}
     else:
-        ret = db.News.insert_one({"Text":news.Text,"Img_uri":news.Img_uri,"id":news.id,"Post_by":user,"Date":news.Date})
+        ret = db.News.insert_one({"Text":news.Text,"Detail":news.Detail,"id":news.id,"Post_by":user,"Date":news.Date})
         return {'Status':"Post Complete"}
     
 
